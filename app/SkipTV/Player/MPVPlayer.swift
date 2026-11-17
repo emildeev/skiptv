@@ -65,7 +65,8 @@ final class MPVPlayer {
         }
         mpv = handle
 
-        var wid = layer
+        // mpv takes the CAMetalLayer pointer as an int64 "window id".
+        var wid = Int64(Int(bitPattern: Unmanaged.passUnretained(layer).toOpaque()))
         check(mpv_set_option(handle, "wid", MPV_FORMAT_INT64, &wid))
         set("vo", "gpu-next")
         set("gpu-api", "vulkan")
