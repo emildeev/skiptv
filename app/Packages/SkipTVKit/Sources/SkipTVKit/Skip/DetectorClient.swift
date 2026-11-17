@@ -45,6 +45,24 @@ public struct SegmentsResponse: Decodable, Sendable {
     }
 }
 
+/// Batch response: `{"items":[...]}` (what the detector serves) or a bare array.
+struct SegmentsBatch: Decodable {
+    var items: [SegmentsResponse]
+
+    enum CodingKeys: String, CodingKey {
+        case items
+    }
+
+    init(from decoder: Decoder) throws {
+        if let array = try? decoder.singleValueContainer().decode([SegmentsResponse].self) {
+            items = array
+            return
+        }
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = try c.decodeIfPresent([SegmentsResponse].self, forKey: .items) ?? []
+    }
+}
+
 private struct LossySegment: Decodable {
     var segment: Segment?
 
@@ -86,9 +104,9 @@ public struct DetectorClient: Sendable {
                   URLQueryItem(name: "ratingKeys", value: ratingKeys.joined(separator: ",")),
               ]) else { return [:] }
         do {
-            let responses = try await transport.decode([SegmentsResponse].self, from: request(url))
+            let batch = try await transport.decode(SegmentsBatch.self, from: request(url))
             var result: [String: [Segment]] = [:]
-            for response in responses {
+            for response in batch.items {
                 result[response.ratingKey] = Self.sanitize(response.segments)
             }
             return result

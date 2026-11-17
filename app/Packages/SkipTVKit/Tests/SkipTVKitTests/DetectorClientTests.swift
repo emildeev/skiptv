@@ -37,7 +37,7 @@ final class DetectorClientTests: XCTestCase {
         XCTAssertEqual(garbage, [])
     }
 
-    func testBatch() async throws {
+    func testBatchBareArray() async throws {
         let transport = MockTransport()
         transport.stub("/v1/segments", body: try fixture("segments_batch"))
         let client = DetectorClient(baseURL: base, token: "tok", transport: transport)
@@ -45,5 +45,25 @@ final class DetectorClientTests: XCTestCase {
         XCTAssertEqual(result["1"], [Segment(type: .intro, start: 0, end: 45)])
         XCTAssertEqual(result["2"], [])
         XCTAssertEqual(transport.recorded.first?.query("ratingKeys"), "1,2")
+    }
+
+    func testBatchItemsObject() async throws {
+        let transport = MockTransport()
+        transport.stub("/v1/segments", body: try fixture("segments_batch_items"))
+        let client = DetectorClient(baseURL: base, token: "tok", transport: transport)
+        let result = await client.segments(ratingKeys: ["1", "2"])
+        XCTAssertEqual(result["1"], [
+            Segment(type: .intro, start: 0, end: 45),
+            Segment(type: .credits, start: 2900, end: 2990),
+        ])
+        XCTAssertEqual(result["2"], [])
+    }
+
+    func testBatchEmptyItems() async {
+        let transport = MockTransport()
+        transport.stub("/v1/segments", body: Data(#"{"items":[]}"#.utf8))
+        let client = DetectorClient(baseURL: base, token: "tok", transport: transport)
+        let result = await client.segments(ratingKeys: ["1"])
+        XCTAssertEqual(result, [:])
     }
 }
