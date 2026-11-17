@@ -1,0 +1,9 @@
+// Shared build settings. Personal overrides go to Local.xcconfig (gitignored),
+// e.g. a unique bundle id and your signing team:
+//
+//   SKIPTV_BUNDLE_ID = com.yourname.skiptv
+//   DEVELOPMENT_TEAM = ABCDE12345
+
+SKIPTV_BUNDLE_ID = io.github.emildeev.skiptv
+
+#include? "Local.xcconfig"

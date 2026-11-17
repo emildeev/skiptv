@@ -1,0 +1,88 @@
+name: tvOS app
+
+on:
+  push:
+    paths:
+      - "app/**"
+      - ".github/workflows/app.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - ".github/workflows/app.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: app-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  XCODEGEN_VERSION: "2.47.0"
+
+jobs:
+  kit-tests:
+    name: SkipTVKit unit tests
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: xcodebuild -version && swift --version
+      - name: swift test
+        working-directory: app/Packages/SkipTVKit
+        run: swift test
+
+  app-build:
+    name: Build for tvOS Simulator
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: |
+          curl -sSfL -o /tmp/xcodegen.zip "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
+          unzip -q /tmp/xcodegen.zip -d /tmp/xcodegen
+          echo "/tmp/xcodegen/xcodegen/bin" >> "$GITHUB_PATH"
+
+      - name: Generate project and check it is committed
+        working-directory: app
+        run: |
+          xcodegen generate
+          if git ls-files --error-unmatch SkipTV.xcodeproj/project.pbxproj >/dev/null 2>&1; then
+            git diff --exit-code -- SkipTV.xcodeproj/project.pbxproj SkipTV/Info.plist \
+              || { echo "::error::SkipTV.xcodeproj is out of date: run 'xcodegen generate' in app/ and commit"; exit 1; }
+          fi
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: app/.spm
+          key: spm-${{ hashFiles('app/project.yml', 'app/SkipTV.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-
+
+      - name: xcodebuild
+        working-directory: app
+        run: |
+          xcodebuild -version
+          set -o pipefail
+          xcodebuild build \
+            -project SkipTV.xcodeproj \
+            -scheme SkipTV \
+            -configuration Debug \
+            -destination 'generic/platform=tvOS Simulator' \
+            -clonedSourcePackagesDirPath .spm \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee build.log | grep -E "error:|warning: .*SkipTV/|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Upload generated project
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodeproj
+          path: |
+            app/SkipTV.xcodeproj
+            app/SkipTV/Info.plist
+            app/build.log
+          retention-days: 7

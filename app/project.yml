@@ -1,0 +1,80 @@
+# XcodeGen spec. SkipTV.xcodeproj is generated from this file and committed,
+# so the project opens without XcodeGen. After editing: `xcodegen generate` in app/.
+name: SkipTV
+options:
+  bundleIdPrefix: io.github.emildeev
+  deploymentTarget:
+    tvOS: "17.0"
+  developmentLanguage: ru
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+configFiles:
+  Debug: Config/SkipTV.xcconfig
+  Release: Config/SkipTV.xcconfig
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+packages:
+  MPVKit:
+    url: https://github.com/mpvkit/MPVKit.git
+    exactVersion: 1.0.0
+  SkipTVKit:
+    path: Packages/SkipTVKit
+
+targets:
+  SkipTV:
+    type: application
+    platform: tvOS
+    sources:
+      - path: SkipTV
+    dependencies:
+      - package: MPVKit
+        product: MPVKit
+      - package: SkipTVKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(SKIPTV_BUNDLE_ID)
+        PRODUCT_NAME: SkipTV
+        TARGETED_DEVICE_FAMILY: "3"
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: App Icon & Top Shelf Image
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+        # libmpv and FFmpeg are static libraries with C++ parts.
+        OTHER_LDFLAGS: $(inherited) -lc++
+    info:
+      path: SkipTV/Info.plist
+      properties:
+        CFBundleDisplayName: SkipTV
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UIUserInterfaceStyle: Dark
+        UIRequiredDeviceCapabilities: [arm64]
+        UILaunchScreen: {}
+        NSAppTransportSecurity:
+          # The home Plex server is reached over plain HTTP on the LAN.
+          NSAllowsArbitraryLoads: true
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: SkipTV подключается к вашему серверу Plex в домашней сети.
+        NSBonjourServices: [_plexmediasvr._tcp]
+
+schemes:
+  SkipTV:
+    build:
+      targets:
+        SkipTV: all
+    run:
+      config: Release
+      # MoltenVK trips Metal API validation on HDR video and crashes under the debugger.
+      enableGPUValidationMode: false
+      enableGPUFrameCaptureMode: disabled
+    test:
+      config: Debug
+    profile:
+      config: Release
+    archive:
+      config: Release
