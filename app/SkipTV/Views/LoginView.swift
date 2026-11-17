@@ -1,6 +1,7 @@
 import CoreImage.CIFilterBuiltins
 import SkipTVKit
 import SwiftUI
+import UIKit
 
 /// Sign in with a plex.tv PIN: the user types the code at plex.tv/link.
 struct LoginView: View {

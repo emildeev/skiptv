@@ -105,8 +105,10 @@ final class PlayerModel {
             }
             self.item = full
 
-            async let segments = self.detector?.segments(ratingKey: full.ratingKey) ?? []
-            async let next = self.findNextEpisode(after: full)
+            let detector = self.detector
+            let api = self.api
+            async let segments = Self.segments(detector: detector, ratingKey: full.ratingKey)
+            async let next = Self.findNextEpisode(api: api, after: full)
             let (found, nextItem) = await (segments, next)
             guard !Task.isCancelled else { return }
 
@@ -120,7 +122,11 @@ final class PlayerModel {
         }
     }
 
-    private func findNextEpisode(after item: PlexItem) async -> PlexItem? {
+    private nonisolated static func segments(detector: DetectorClient?, ratingKey: String) async -> [Segment] {
+        await detector?.segments(ratingKey: ratingKey) ?? []
+    }
+
+    private nonisolated static func findNextEpisode(api: PlexServerAPI, after item: PlexItem) async -> PlexItem? {
         guard item.type == .episode, let show = item.grandparentRatingKey else { return nil }
         guard let episodes = try? await api.allEpisodes(showRatingKey: show) else { return nil }
         return EpisodeNavigator.next(after: item, in: episodes)
@@ -337,6 +343,11 @@ final class PlayerModel {
     }
 
     private func applyDefaultTracks() {
+        // Sidecar subtitles (e.g. .srt next to the file) are separate files on the server.
+        for stream in item.primaryPart?.streams ?? [] where stream.kind == .subtitle {
+            guard let key = stream.key, let url = api.resourceURL(key) else { continue }
+            player.addSubtitle(url, title: stream.displayTitle, language: stream.languageCode)
+        }
         let tracks = player.tracks()
         audioTracks = tracks.filter { $0.kind == .audio }
         subtitleTracks = tracks.filter { $0.kind == .subtitle }

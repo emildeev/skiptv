@@ -6,7 +6,13 @@ struct HomeView: View {
     @Environment(Navigator.self) private var navigator
 
     @State private var onDeck: [PlexItem] = []
-    @State private var recent: [(section: PlexLibrarySection, items: [PlexItem])] = []
+    struct RecentShelf: Identifiable {
+        var section: PlexLibrarySection
+        var items: [PlexItem]
+        var id: String { section.id }
+    }
+
+    @State private var recent: [RecentShelf] = []
     @State private var loading = true
     @State private var error: String?
     @FocusState private var focused: String?
@@ -42,20 +48,24 @@ struct HomeView: View {
                                     LandscapeCard(
                                         item: item,
                                         title: item.displayTitle,
-                                        subtitle: item.type == .episode ? item.displaySubtitle : remaining(item)
+                                        subtitle: item.type == .episode ? item.displaySubtitle : remaining(item),
+                                        focus: CardFocus(binding: $focused, id: "deck|\(item.ratingKey)")
                                     ) {
                                         app.requestPlay(item)
                                     }
-                                    .focused($focused, equals: "deck|\(item.ratingKey)")
                                 }
                             }
                         }
-                        ForEach(recent, id: \.section.id) { entry in
+                        ForEach(recent) { entry in
                             if !entry.items.isEmpty {
                                 Shelf(title: "Недавно добавлено · \(entry.section.title)") {
                                     ForEach(entry.items) { item in
-                                        PosterCard(item: item) { navigator.open(item, app: app) }
-                                            .focused($focused, equals: "\(entry.section.id)|\(item.ratingKey)")
+                                        PosterCard(
+                                            item: item,
+                                            focus: CardFocus(binding: $focused, id: "\(entry.section.id)|\(item.ratingKey)")
+                                        ) {
+                                            navigator.open(item, app: app)
+                                        }
                                     }
                                 }
                             }
@@ -81,13 +91,13 @@ struct HomeView: View {
         do {
             async let deck = api.onDeck()
             let sections = app.sections
-            var loaded: [(PlexLibrarySection, [PlexItem])] = []
+            var loaded: [RecentShelf] = []
             for section in sections {
                 let items = (try? await api.recentlyAdded(section: section)) ?? []
-                loaded.append((section, Self.collapse(items)))
+                loaded.append(RecentShelf(section: section, items: Self.collapse(items)))
             }
             onDeck = try await deck
-            recent = loaded.map { (section: $0.0, items: $0.1) }
+            recent = loaded
             error = nil
         } catch {
             self.error = "Не удалось загрузить главную: \(error.localizedDescription)"

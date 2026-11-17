@@ -141,6 +141,11 @@ final class MPVPlayer {
         command(["seek", String(format: "%.3f", seconds), "relative+exact"])
     }
 
+    /// Adds an external subtitle file without selecting it.
+    func addSubtitle(_ url: URL, title: String?, language: String?) {
+        command(["sub-add", url.absoluteString, "auto", title ?? "", language ?? ""])
+    }
+
     func selectAudio(_ id: Int?) {
         setProperty("aid", id.map(String.init) ?? "no")
     }

@@ -60,15 +60,13 @@ struct ShowView: View {
                                     LandscapeCard(
                                         item: episode,
                                         title: "\(episode.index.map { "\($0). " } ?? "")\(episode.title)",
-                                        subtitle: TimeFormat.runtime(milliseconds: episode.duration)
-                                    ) {
-                                        app.requestPlay(episode)
-                                    }
-                                    .focused($focus, equals: episode.ratingKey)
-                                    .contextMenu {
-                                        Button(episode.isWatched ? "Отметить непросмотренной" : "Отметить просмотренной") {
+                                        subtitle: TimeFormat.runtime(milliseconds: episode.duration),
+                                        focus: CardFocus(binding: $focus, id: episode.ratingKey),
+                                        menu: CardMenuItem(title: episode.isWatched ? "Отметить непросмотренной" : "Отметить просмотренной") {
                                             Task { await app.setWatched(episode, !episode.isWatched) }
                                         }
+                                    ) {
+                                        app.requestPlay(episode)
                                     }
                                 }
                             }

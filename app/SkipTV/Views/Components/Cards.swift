@@ -1,10 +1,47 @@
 import SkipTVKit
 import SwiftUI
 
+/// Optional FocusState binding for cards (the focusable part is the inner button).
+struct CardFocus {
+    var binding: FocusState<String?>.Binding
+    var id: String
+}
+
+/// Long-press menu entry of a card.
+struct CardMenuItem {
+    var title: String
+    var action: () -> Void
+}
+
+private struct CardFocusModifier: ViewModifier {
+    let focus: CardFocus?
+    let menu: CardMenuItem?
+
+    func body(content: Content) -> some View {
+        let focused = Group {
+            if let focus {
+                content.focused(focus.binding, equals: focus.id)
+            } else {
+                content
+            }
+        }
+        return Group {
+            if let menu {
+                focused.contextMenu {
+                    Button(menu.title, action: menu.action)
+                }
+            } else {
+                focused
+            }
+        }
+    }
+}
+
 /// Vertical poster with title underneath (movies, shows, seasons).
 struct PosterCard: View {
     @Environment(AppModel.self) private var app
     let item: PlexItem
+    var focus: CardFocus? = nil
     var action: () -> Void
 
     var body: some View {
@@ -20,6 +57,7 @@ struct PosterCard: View {
                     }
             }
             .buttonStyle(.card)
+            .modifier(CardFocusModifier(focus: focus, menu: nil))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.type == .season ? item.displayTitle : item.title)
@@ -52,6 +90,8 @@ struct LandscapeCard: View {
     var title: String
     var subtitle: String?
     var size: CGSize = Theme.landscapeSize
+    var focus: CardFocus? = nil
+    var menu: CardMenuItem? = nil
     var action: () -> Void
 
     var body: some View {
@@ -69,6 +109,7 @@ struct LandscapeCard: View {
                     }
             }
             .buttonStyle(.card)
+            .modifier(CardFocusModifier(focus: focus, menu: menu))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)

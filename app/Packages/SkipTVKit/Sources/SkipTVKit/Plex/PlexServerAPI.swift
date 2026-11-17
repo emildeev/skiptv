@@ -160,6 +160,11 @@ public struct PlexServerAPI: Sendable {
 
     /// Original file for direct play (no transcoding).
     public func directPlayURL(_ part: PlexPart) -> URL? {
-        baseURL.appendingPlexPath(part.key, query: [URLQueryItem(name: "X-Plex-Token", value: token)])
+        resourceURL(part.key)
+    }
+
+    /// Any server path with the token attached (files, sidecar subtitles).
+    public func resourceURL(_ path: String) -> URL? {
+        baseURL.appendingPlexPath(path, query: [URLQueryItem(name: "X-Plex-Token", value: token)])
     }
 }
