@@ -8,14 +8,14 @@ public enum EpisodeNavigator {
             .enumerated()
             .sorted { lhs, rhs in
                 let l = sortKey(lhs.element), r = sortKey(rhs.element)
-                return l != r ? l < r : lhs.offset < rhs.offset
+                return (l.season, l.episode, lhs.offset) < (r.season, r.episode, rhs.offset)
             }
             .map(\.element)
     }
 
-    private static func sortKey(_ item: PlexItem) -> [Int] {
+    private static func sortKey(_ item: PlexItem) -> (season: Int, episode: Int) {
         let season = item.parentIndex ?? Int.max
-        return [season == 0 ? Int.max : season, item.index ?? Int.max]
+        return (season == 0 ? Int.max : season, item.index ?? Int.max)
     }
 
     /// Episode that follows `current` in the show, or nil for the last one.
